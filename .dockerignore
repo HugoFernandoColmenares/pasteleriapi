@@ -1,0 +1,16 @@
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+*.iml
+target
+data
+*.db
+docs
+README.md
+HELP.md
+.dockerignore
+Dockerfile
+docker-compose.yml
+emerge.yaml

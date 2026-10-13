@@ -1,0 +1,15 @@
+services:
+  pastry-api:
+    build: .
+    image: pastry-api:latest
+    container_name: pastry-api
+    ports:
+      - "8080:8080"
+    environment:
+      APP_DATASOURCE_URL: jdbc:sqlite:/data/pastry_shop.db
+    volumes:
+      - pastry-data:/data
+    restart: unless-stopped
+
+volumes:
+  pastry-data:

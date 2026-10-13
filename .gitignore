@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Runtime / local data ###
+pastry_shop.db
+data/
+
+### Emerge visualization export ###
+docs/emerge-export/
+
+### Screenshots (keep the folder, ignore binary dumps until added) ###
+!docs/screenshots/.gitkeep
