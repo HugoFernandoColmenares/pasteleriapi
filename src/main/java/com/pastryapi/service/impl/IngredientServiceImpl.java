@@ -1,73 +1,89 @@
 package com.pastryapi.service.impl;
 
 import com.pastryapi.dto.IngredientDto;
+import com.pastryapi.dto.PageResponse;
+import com.pastryapi.exception.ConflictException;
+import com.pastryapi.exception.ResourceNotFoundException;
 import com.pastryapi.model.Ingredient;
 import com.pastryapi.repository.IngredientRepository;
+import com.pastryapi.repository.RecipeRepository;
 import com.pastryapi.service.IngredientService;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class IngredientServiceImpl implements IngredientService {
 
     private final IngredientRepository ingredientRepository;
+    private final RecipeRepository recipeRepository;
 
-    public IngredientServiceImpl(IngredientRepository ingredientRepository) {
+    public IngredientServiceImpl(IngredientRepository ingredientRepository, RecipeRepository recipeRepository) {
         this.ingredientRepository = ingredientRepository;
+        this.recipeRepository = recipeRepository;
     }
 
     @Override
-    public IngredientDto createIngredient(IngredientDto ingredientDto) {
-        Ingredient ingredient = convertToEntity(ingredientDto);
-        ingredient.setGuid(UUID.randomUUID()); // Assign a new UUID
-        Ingredient savedIngredient = ingredientRepository.save(ingredient);
-        return convertToDto(savedIngredient);
+    public IngredientDto createIngredient(IngredientDto dto) {
+        if (ingredientRepository.existsByNameIgnoreCase(dto.getName())) {
+            throw new ConflictException("An ingredient named '" + dto.getName() + "' already exists");
+        }
+        Ingredient ingredient = toEntity(dto);
+        ingredient.setGuid(UUID.randomUUID());
+        ingredient.setUpdatedAt(Instant.now());
+        return toDto(ingredientRepository.save(ingredient));
     }
 
     @Override
-    public List<IngredientDto> getAllIngredients() {
-        return ingredientRepository.findAll().stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+    public IngredientDto getIngredientById(UUID id) {
+        return toDto(requireIngredient(id));
     }
 
     @Override
-    public Optional<IngredientDto> getIngredientById(UUID id) {
-        return ingredientRepository.findById(id).map(this::convertToDto);
-    }
-
-    @Override
-    public IngredientDto updateIngredient(UUID id, IngredientDto ingredientDto) {
-        // Check if ingredient exists
-        Ingredient existingIngredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
-
-        // Update fields
-        existingIngredient.setName(ingredientDto.getName());
-        existingIngredient.setBrand(ingredientDto.getBrand());
-        existingIngredient.setPrice(ingredientDto.getPrice());
-        existingIngredient.setStatus(ingredientDto.isStatus());
-        existingIngredient.setObservations(ingredientDto.getObservations());
-
-        Ingredient updatedIngredient = ingredientRepository.update(existingIngredient);
-        return convertToDto(updatedIngredient);
+    public IngredientDto updateIngredient(UUID id, IngredientDto dto) {
+        Ingredient existing = requireIngredient(id);
+        existing.setName(dto.getName());
+        existing.setBrand(dto.getBrand());
+        existing.setPrice(dto.getPrice());
+        existing.setStatus(dto.isStatus());
+        existing.setObservations(dto.getObservations());
+        existing.setUnit(dto.getUnit());
+        existing.setQuantity(dto.getQuantity());
+        existing.setMinimumQuantity(dto.getMinimumQuantity());
+        existing.setUpdatedAt(Instant.now());
+        return toDto(ingredientRepository.update(existing));
     }
 
     @Override
     public void deleteIngredient(UUID id) {
-        // Check if ingredient exists before deleting
-        ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+        requireIngredient(id);
+        if (recipeRepository.isIngredientUsed(id)) {
+            throw new ConflictException("Ingredient is used by a recipe and cannot be deleted");
+        }
         ingredientRepository.deleteById(id);
     }
 
-    // --- Mapper Methods ---
+    @Override
+    public PageResponse<IngredientDto> search(String name, Boolean status, Boolean lowStock, int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        long total = ingredientRepository.count(name, status, lowStock);
+        List<IngredientDto> content = ingredientRepository.search(name, status, lowStock, safePage * safeSize, safeSize)
+                .stream()
+                .map(this::toDto)
+                .toList();
+        int totalPages = (int) Math.ceil(total / (double) safeSize);
+        return new PageResponse<>(content, safePage, safeSize, total, totalPages);
+    }
 
-    private IngredientDto convertToDto(Ingredient ingredient) {
+    private Ingredient requireIngredient(UUID id) {
+        return ingredientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
+    }
+
+    private IngredientDto toDto(Ingredient ingredient) {
         IngredientDto dto = new IngredientDto();
         dto.setGuid(ingredient.getGuid());
         dto.setName(ingredient.getName());
@@ -75,17 +91,24 @@ public class IngredientServiceImpl implements IngredientService {
         dto.setPrice(ingredient.getPrice());
         dto.setStatus(ingredient.isStatus());
         dto.setObservations(ingredient.getObservations());
+        dto.setUnit(ingredient.getUnit());
+        dto.setQuantity(ingredient.getQuantity());
+        dto.setMinimumQuantity(ingredient.getMinimumQuantity());
+        dto.setUpdatedAt(ingredient.getUpdatedAt());
+        dto.setLowStock(ingredient.isLowStock());
         return dto;
     }
 
-    private Ingredient convertToEntity(IngredientDto dto) {
+    private Ingredient toEntity(IngredientDto dto) {
         Ingredient ingredient = new Ingredient();
-        // We don't set the GUID here from the DTO on creation
-        ingredient.setName(dto.getName());
+        ingredient.setName(dto.getName().trim());
         ingredient.setBrand(dto.getBrand());
         ingredient.setPrice(dto.getPrice());
         ingredient.setStatus(dto.isStatus());
         ingredient.setObservations(dto.getObservations());
+        ingredient.setUnit(dto.getUnit());
+        ingredient.setQuantity(dto.getQuantity());
+        ingredient.setMinimumQuantity(dto.getMinimumQuantity());
         return ingredient;
     }
 }

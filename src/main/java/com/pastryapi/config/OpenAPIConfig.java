@@ -14,6 +14,6 @@ public class OpenAPIConfig {
                 .info(new Info()
                         .title("Pastry Shop API")
                         .version("1.0")
-                        .description("A simple REST API for managing pastry shop ingredients."));
+                        .description("REST API for pastry-shop stock, recipes, and batch production."));
     }
 }

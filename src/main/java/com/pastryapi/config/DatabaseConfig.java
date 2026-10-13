@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 @Configuration
 public class DatabaseConfig {
@@ -18,7 +19,12 @@ public class DatabaseConfig {
     public Connection connection() throws SQLException {
         try {
             Class.forName("org.sqlite.JDBC");
-            return DriverManager.getConnection(dbUrl);
+            Connection connection = DriverManager.getConnection(dbUrl);
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute("PRAGMA foreign_keys = ON");
+                stmt.execute("PRAGMA busy_timeout = 5000");
+            }
+            return connection;
         } catch (ClassNotFoundException e) {
             throw new SQLException("SQLite JDBC driver not found.", e);
         }

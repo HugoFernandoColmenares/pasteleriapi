@@ -9,7 +9,7 @@ RUN chmod +x mvnw \
     && ./mvnw dependency:go-offline -B
 
 COPY src src
-RUN ./mvnw package -DskipTests -B
+RUN ./mvnw verify -B
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app
