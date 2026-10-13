@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM eclipse-temurin:17-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 
 COPY mvnw mvnw.cmd pom.xml ./
@@ -11,7 +11,7 @@ RUN chmod +x mvnw \
 COPY src src
 RUN ./mvnw package -DskipTests -B
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 RUN mkdir -p /data \
@@ -27,4 +27,4 @@ ENV APP_DATASOURCE_URL=jdbc:sqlite:/data/pastry_shop.db
 EXPOSE 8080
 VOLUME ["/data"]
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "app.jar"]

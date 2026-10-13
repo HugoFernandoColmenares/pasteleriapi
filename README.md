@@ -8,12 +8,12 @@ The Pastry API provides endpoints to perform CRUD (Create, Read, Update, Delete)
 
 ## Technologies
 
-- Java 17
-- Spring Boot 3.2.3
+- Java 25
+- Spring Boot 4.1.1
 - Maven
 - SQLite
-- Lombok
-- SpringDoc OpenAPI (Swagger)
+- Lombok 1.18.48
+- SpringDoc OpenAPI 3.1.1 (Swagger)
 - Docker
 
 ## How to run the project
